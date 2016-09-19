@@ -1,0 +1,16 @@
+HTTP/1.1 200 OK
+Connection: keep-alive
+Server: gunicorn/19.6.0
+Date: Wed, 20 Jul 2016 02:44:26 GMT
+Content-Type: application/json
+Content-Length: 155
+Via: 1.1 vegur
+
+{
+  "iss_position": {
+    "latitude": -0.8280848778963528, 
+    "longitude": -86.33370039198789
+  }, 
+  "message": "success", 
+  "timestamp": 1468982666
+}
