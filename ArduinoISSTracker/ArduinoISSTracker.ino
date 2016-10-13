@@ -37,15 +37,15 @@ void connectClient() {
     }
 }
 
-char* callApiReadResponse() {
+std::vector<double> callApiReadResponse() {
     if (client.connected()) {
         client.println("GET /iss-now.json HTTP/1.1");
         client.println("Host: api.open-notify.org");
         client.println("Connection: close");
         client.println();
         client.flush();
+        Serial.println("GET Request Sent!");
     }
-    Serial.println("GET Request Sent!");
     Serial.println("Waiting for Data...");
     while (!client.available()) {
         // wait for incoming data
@@ -87,40 +87,35 @@ char* callApiReadResponse() {
 
     jsonLength = atoi(jsonLengthSubstring);
     Serial.print("Length of Json is: "); Serial.println(jsonLength);
-    char* jsonResponse = (char*) malloc(jsonLength+1);
+    char jsonResponse[200];
     uint8_t count = 1;
     jsonResponse[0] = '{';
 
     // Store the JSON data
-    while (client.available() && count < jsonLength) {
+    while (client.available() && count < jsonLength-1) {
         jsonResponse[count] = client.read();
         count++;
     }
-    jsonResponse[jsonLength] = '\0';
-
+    jsonResponse[200] = '\0';
     // Consume the buffer.
     while(client.available()) {
         client.read();
     }
-    return jsonResponse;
-}
 
-std::vector<double> parseJson(char const* jsonResponse) {
-    Serial.println(jsonResponse);
-    StaticJsonBuffer<170> jsonBuffer;
+    promptUserToProceed("Contintue to Parsing?");
+
+    StaticJsonBuffer<200> jsonBuffer;
     JsonObject& root = jsonBuffer.parseObject(jsonResponse);
-
     if (!root.success()) {
         Serial.println("jsonParsing failed");
     }
-
     double satLat = root["iss_position"]["latitude"];
     double satLong = root["iss_position"]["longitude"];
     std::vector<double> latAndLong = {satLat, satLong};
     return latAndLong;
 }
 
-void moveMotors(std::vector<double> latAndLong) {
+void moveMotors(std::vector<double>& latAndLong) {
     ISSTracker tracker(33, 84);
     std::vector<std::vector<double>> coords = tracker.satUnitVector(latAndLong[0], latAndLong[1]);
     Serial.println();
@@ -157,17 +152,8 @@ void setup() {
 
 void loop() {
     Serial.println("Calling API ......");
-    char* jsonResponse = callApiReadResponse();
-    
-    int i = 0;
-    while(jsonResponse[i] != '\0') {
-        Serial.print(jsonResponse[i]);
-        i++;
-    }
+    std::vector<double> latAndLong = callApiReadResponse();
 
-    promptUserToProceed("Contintue to Parsing?");
-
-    std::vector<double> latAndLong = parseJson(jsonResponse);
     Serial.print("Latitude: ");
     Serial.println(latAndLong[0]);
     Serial.print("Longitude: ");
@@ -177,11 +163,6 @@ void loop() {
 
     moveMotors(latAndLong);
 
-    promptUserToProceed("Call Api?");    
-
-    for (int i = 0; i < jsonLength; i++) {
-        free(jsonResponse[i]);
-    }
-    free(jsonResponse);
+    promptUserToProceed("Call Api?");
 }
 
